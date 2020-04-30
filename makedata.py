@@ -9,7 +9,7 @@ import sys
 import threading
 import concurrent.futures
 import uuid
-from google.cloud import bigquery
+#from google.cloud import bigquery
 from google.cloud import storage
 from PIL import Image
 from datetime import datetime
@@ -21,7 +21,8 @@ args = parser.parse_args()
 
 
 startTime = datetime.now()
-os.system('export GOOGLE_APPLICATION_CREDENTIALS="id.json"')
+os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = "key.json"
+#os.system('export GOOGLE_APPLICATION_CREDENTIALS="id.json"') #This will be modified
 
 def upload_blob(bucket_name, source_file_name, destination_blob_name):
     """Uploads a file to the bucket."""
@@ -144,6 +145,8 @@ def multiplier(goodP, key, path):
 
 
 def to3(item):
+    if not item:
+        return 6
     # (item['rotcor_crop_of_subject'], item['mask_of_subjects_face'])
     # divvyup_store/170427/rotcor_crop_of_subject, divvyup_store/170427/final
     key = item.split('/')[1]
@@ -182,7 +185,7 @@ to3(longList)
 
 if os.path.isfile( 'datasets/A/test/'+longList.split('/')[1]+'.png'):
     print(f'starting improving ilumination.  {datetime.now()-startTime} we preprocessed the image')   
-    os.system(f'python3 -u  test.py --dataroot datasets --checkpoints_dir ckpt  --num_test {len(longList)}')
+    os.system(f'python3 -u  test.py --dataroot datasets   --num_test {len(longList)}')
     try:
         (_, _, filenames) = next(os.walk('results/pix2512/test_latest/images/'))
         print(f'len(filenames) file created')
