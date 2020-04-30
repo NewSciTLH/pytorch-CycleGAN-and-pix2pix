@@ -174,15 +174,15 @@ else:
     print('No input image given!!!')
     #longList = getData()
 
-assert len(longList[0].split('.')) == 1 
+#assert len(longList[0].split('.')) == 1 
 # In case we received several request per minute,  we can query them keep the line below
-
-with concurrent.futures.ProcessPoolExecutor(max_workers=8) as executor:
-    executor.map(to3,  longList)
+to3(longList)
+#with concurrent.futures.ProcessPoolExecutor(max_workers=8) as executor:
+#    executor.map(to3,  longList)
 
 if os.path.isfile( 'datasets/A/test/'+longList.split('/')[1]+'.png'):
     print(f'starting improving ilumination.  {datetime.now()-startTime} we preprocessed the image')   
-    os.system(f'python3 -u  test.py --dataroot datasets --num_test {len(longList)}')
+    os.system(f'python3 -u  test.py --dataroot datasets --checkpoints_dir ckpt  --num_test {len(longList)}')
     try:
         (_, _, filenames) = next(os.walk('results/pix2512/test_latest/images/'))
         print(f'len(filenames) file created')
