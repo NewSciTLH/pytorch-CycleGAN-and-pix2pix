@@ -13,10 +13,10 @@ else:
     os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = "key.json"
 
 print('Downloading weights...')
-makedata.downloadBlob('model_staging','colorization/pix2pix/pix2512/latest_net_D.pth', 'ckpt/pix2512/latest_net_D.pth')
-makedata.downloadBlob('model_staging','colorization/pix2pix/pix2512/latest_net_G.pth', 'ckpt/pix2512/latest_net_G.pth')
-makedata.downloadBlob('model_staging','colorization/pix2pix/pix2512/loss_log.txt', 'ckpt/pix2512/loss_log.txt')
-makedata.downloadBlob('model_staging','colorization/pix2pix/pix2512/test_opt.txt', 'ckpt/pix2512/test_opt.txt')
+makedata.downloadBlob('newsci-models','colorization/pix2pix/pix2512/latest_net_D.pth', 'ckpt/pix2512/latest_net_D.pth')
+makedata.downloadBlob('newsci-models','colorization/pix2pix/pix2512/latest_net_G.pth', 'ckpt/pix2512/latest_net_G.pth')
+makedata.downloadBlob('newsci-models','colorization/pix2pix/pix2512/loss_log.txt', 'ckpt/pix2512/loss_log.txt')
+makedata.downloadBlob('newsci-models','colorization/pix2pix/pix2512/test_opt.txt', 'ckpt/pix2512/test_opt.txt')
 
 print('Initializing Flask Server...')
 app = Flask(__name__)

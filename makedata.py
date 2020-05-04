@@ -187,7 +187,7 @@ def start(inputPath, outputFolder):
         return (e)
     #with concurrent.futures.ProcessPoolExecutor(max_workers=8) as executor:
     #    executor.map(to3,  longList)
-    if os.path.isfile( 'datasets/A/test/'+longList.split('/')[1]+'.png'):
+    if os.path.isfile('datasets/A/test/'+longList.split('/')[1]+'.png'):
         print(f'starting improving ilumination.  {datetime.now()-startTime} we preprocessed the image')   
         os.system(f'python3 -u  test.py --dataroot datasets   --num_test {len(longList)}')
         try:
@@ -205,8 +205,8 @@ def start(inputPath, outputFolder):
  
     #os.system('rm -f "/home/ericd/tests/Dockerpix/docs/datasets/A/test/*"')
     print('Program Ended')
-    duration = datetime.now()-startTime
-    return ("Completed. Duration was " + duration)
+    duration = datetime.now() - startTime
+    return ("Completed. Duration was " + str(duration))
 
 
 
