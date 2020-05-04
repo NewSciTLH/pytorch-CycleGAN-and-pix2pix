@@ -15,4 +15,4 @@ def run():
     print(inputPath)
     print(outputFolder)
     result = makedata.start(inputPath, outputFolder)
-    return render_template('index.html', result=result)
+    return render_template('index.html', result=result, inputPath=inputPath, outputFolder=outputFolder)
