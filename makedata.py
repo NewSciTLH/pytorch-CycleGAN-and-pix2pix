@@ -14,10 +14,10 @@ from google.cloud import storage
 from PIL import Image
 from datetime import datetime
 import argparse
-parser = argparse.ArgumentParser()
-parser.add_argument("inputPath", type=str, help="the path to the input image")
-parser.add_argument("outputFolder", type=str, help="the path to the output folder")
-args = parser.parse_args()
+#parser = argparse.ArgumentParser()
+#parser.add_argument("inputPath", type=str, help="the path to the input image")
+#parser.add_argument("outputFolder", type=str, help="the path to the output folder")
+#args = parser.parse_args()
 
 
 startTime = datetime.now()
@@ -33,9 +33,7 @@ def upload_blob(bucket_name, source_file_name, destination_blob_name):
     storage_client = storage.Client()
     bucket = storage_client.bucket(bucket_name)
     blob = bucket.blob(destination_blob_name)
-
     blob.upload_from_filename(source_file_name)
-
     print(
         "File {} uploaded to {}.".format(
             source_file_name, destination_blob_name
@@ -51,6 +49,8 @@ def downloadBlob(bucket_name, source_blob_name, destination_file_name):
     storage_client = storage.Client()
     bucket = storage_client.bucket(bucket_name)
     blob = bucket.blob(source_blob_name)
+    if not os.path.exists('ckpt/pix2512'):
+        os.makedirs('ckpt/pix2512')
     blob.download_to_filename(destination_file_name)
     print(
         "Blob {} downloaded to {}.".format(
@@ -170,37 +170,43 @@ def to3(item):
         print(e)
         return 2
 
-if args.inputPath and args.outputFolder:
-    longList = args.inputPath
-else:
-    longList = []
-    print('No input image given!!!')
-    #longList = getData()
+def start(inputPath, outputFolder):
+    if inputPath and outputFolder:
+        longList = inputPath
+    else:
+        longList = []
+        print('No input image given!!!')
+        #longList = getData()
 
-#assert len(longList[0].split('.')) == 1 
-# In case we received several request per minute,  we can query them keep the line below
-to3(longList)
-#with concurrent.futures.ProcessPoolExecutor(max_workers=8) as executor:
-#    executor.map(to3,  longList)
-
-if os.path.isfile( 'datasets/A/test/'+longList.split('/')[1]+'.png'):
-    print(f'starting improving ilumination.  {datetime.now()-startTime} we preprocessed the image')   
-    os.system(f'python3 -u  test.py --dataroot datasets   --num_test {len(longList)}')
+    #assert len(longList[0].split('.')) == 1 
+    # In case we received several request per minute,  we can query them keep the line below
     try:
-        (_, _, filenames) = next(os.walk('results/pix2512/test_latest/images/'))
-        print(f'len(filenames) file created')
-        for file in filenames:
-            if 'fake' in file:
-                folder = args.outputFolder.split('/')
-                upload_blob(folder[0], f'results/pix2512/test_latest/images/{file}','/'.join(folder[1:])+'/'+file)
+        to3(longList)
     except Exception as e:
-        print('error 5')
         print(e)
-
-
-print(f'total time {datetime.now()-startTime}')
-#os.system('rm -f "/home/ericd/tests/Dockerpix/docs/datasets/A/test/*"')
-print('program ended')
+        return (e)
+    #with concurrent.futures.ProcessPoolExecutor(max_workers=8) as executor:
+    #    executor.map(to3,  longList)
+    if os.path.isfile( 'datasets/A/test/'+longList.split('/')[1]+'.png'):
+        print(f'starting improving ilumination.  {datetime.now()-startTime} we preprocessed the image')   
+        os.system(f'python3 -u  test.py --dataroot datasets   --num_test {len(longList)}')
+        try:
+            (_, _, filenames) = next(os.walk('results/pix2512/test_latest/images/'))
+            print(f'len(filenames) file created')
+            for file in filenames:
+                if 'fake' in file:
+                    folder = outputFolder.split('/')
+                    upload_blob(folder[0], f'results/pix2512/test_latest/images/{file}','/'.join(folder[1:])+'/'+file)
+        except Exception as e:
+            print('error 5')
+            print(e)
+            return e
+    
+ 
+    #os.system('rm -f "/home/ericd/tests/Dockerpix/docs/datasets/A/test/*"')
+    print('Program Ended')
+    duration = datetime.now()-startTime
+    return ("Completed. Duration was " + duration)
 
 
 

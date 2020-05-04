@@ -1,0 +1,12 @@
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: colorization-algorithm-ingress
+  annotations:
+    kubernetes.io/ingress.global-static-ip-name: "colorization"
+    networking.gke.io/managed-certificates: sslcert
+    kubernetes.io/ingress.allow-http: "true"
+spec:
+  backend:
+    serviceName: colorization-algorithm
+    servicePort: 80

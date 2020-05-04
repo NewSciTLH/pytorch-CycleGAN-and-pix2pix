@@ -6,3 +6,5 @@ scikit-image
 six<2.0.0dev,>=1.13.0
 google-cloud-bigquery
 google-cloud-storage
+Flask==1.1.1
+Flask-Cors==3.0.8
