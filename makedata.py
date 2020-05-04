@@ -137,14 +137,12 @@ def multiplier(goodP, key, path):
     #display(sourcePath)
 
     #if os.path.isfile(targetPath) and os.path.isfile(sourcePath):
-    if os.path.isfile(sourcePath): 
-        print(f'Image {sourcePath} saved ')
-    else: 
-        print('error 3')
+    return os.path.isfile(sourcePath) + f' Image {sourcePath} saved '
 
 
 
 def to3(item):
+    err = ''
     if not item:
         print('no image received')
         return 6
@@ -164,15 +162,16 @@ def to3(item):
         downloadBlob('divvyup_store', good.replace('divvyup_store/',''), goodP)
         print(goodP)
         #downloadBlob('divvyup_store', bad.replace('divvyup_store/',''), badP)
-        multiplier(goodP, key, path)
+        err = multiplier(goodP, key, path)
         os.remove(goodP)
         #os.remove(badP)
     except Exception as e:
         print('error 2')
         print(e)
         return 2
-
+    return err
 def start(inputPath, outputFolder):
+    err = ''
     if inputPath and outputFolder:
         longList = inputPath
     else:
@@ -184,7 +183,7 @@ def start(inputPath, outputFolder):
     #assert len(longList[0].split('.')) == 1 
     # In case we received several request per minute,  we can query them keep the line below
     try:
-        to3(longList)
+        err = to3(longList)
     except Exception as e:
         print(e)
         return (e)
@@ -205,7 +204,7 @@ def start(inputPath, outputFolder):
             print(e)
             return e
     else:
-        return 'file not processed'
+        return err + 'file not processed'
  
     #os.system('rm -f "/home/ericd/tests/Dockerpix/docs/datasets/A/test/*"')
     print('Program Ended')
