@@ -146,7 +146,9 @@ def multiplier(goodP, key, path):
 
 def to3(item):
     if not item:
+        print('no image received')
         return 6
+    
     # (item['rotcor_crop_of_subject'], item['mask_of_subjects_face'])
     # divvyup_store/170427/rotcor_crop_of_subject, divvyup_store/170427/final
     key = item.split('/')[1]
@@ -176,6 +178,7 @@ def start(inputPath, outputFolder):
     else:
         longList = []
         print('No input image given!!!')
+        return 'No input image given!!!'
         #longList = getData()
 
     #assert len(longList[0].split('.')) == 1 
@@ -201,7 +204,8 @@ def start(inputPath, outputFolder):
             print('error 5')
             print(e)
             return e
-    
+    else:
+        return 'file not processed'
  
     #os.system('rm -f "/home/ericd/tests/Dockerpix/docs/datasets/A/test/*"')
     print('Program Ended')
