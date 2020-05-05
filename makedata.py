@@ -1,28 +1,20 @@
 # input pair (4 channel image 350 by 300 with a mask, path of folder to save)
 #output 3 channel image 512 by 512 with black background that is uploaded
-#Eric 2/24
-#import cv2
+#Eric and Jeremy 5/5
 import numpy as np
 import os
 import sys
-#from IPython.core.debugger import set_trace
 import threading
 import concurrent.futures
 import uuid
-#from google.cloud import bigquery
 from google.cloud import storage
 from PIL import Image
 from datetime import datetime
 import argparse
-#parser = argparse.ArgumentParser()
-#parser.add_argument("inputPath", type=str, help="the path to the input image")
-#parser.add_argument("outputFolder", type=str, help="the path to the output folder")
-#args = parser.parse_args()
 
 
 startTime = datetime.now()
 os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = "key.json"
-#os.system('export GOOGLE_APPLICATION_CREDENTIALS="id.json"') #This will be modified
 
 def upload_blob(bucket_name, source_file_name, destination_blob_name):
     """Uploads a file to the bucket."""
@@ -57,158 +49,93 @@ def downloadBlob(bucket_name, source_blob_name, destination_file_name):
             source_blob_name, destination_file_name
         )
     )
-def getData(): # predicted_mask have the mask while rotcrop has the image
-    queryclient = bigquery.Client()
-    query="""
-    SELECT M.predicted_mask 
-    FROM divvyup_metadata.metadata M JOIN divvyup_metadata.inputNNquality N 
-    ON M.rotcor_crop_of_subject = N.rotcor_crop_of_subject
-    WHERE 
-    (M.predicted_mask IS NOT NULL
-    AND
-    M.rotcor_crop_of_subject IS NOT NULL
-    )
-    ORDER BY RAND()
-    LIMIT 100
-    """
-
-    results = queryclient.query(query).result()
-    print(f'Our data has {results.total_rows} total rows')
-    longList = [  item['predicted_mask'] for item in results  ]
-    print(f'longList created with {len(longList)} items' )
-    
-    return longList
 
 
 
 def normalizer(image):
-    # to homogenize the images
+    """Homogenize the images"""
+    # numpy matrix
     if np.any(image>2):
         n=image/255
     else:
         n = image
     return n
 
-#we multiply with the channels
-def multiplier(goodP, key, path):
-    #We input a rgb(a) image and a mask file
+def multiplier(goodP, key):
+    """Given an image with 4 channels, it multiplies the first 3 by the mask, and makes it 512 by 512#"""
+    #goodP path to image
+    #key name
     try:
         imageRot =  Image.open(goodP)
-        #imageMask   =  np.load(badP ) #this should be read with numpy from now on
-        #imageRot    = cv2.imread(goodP, cv2.IMREAD_UNCHANGED) #change path
     except Exception as e:
-        print('error 1')
-        print(str(e))
-        return 1
+        return str(1)+ str(e)
     imageRot = np.array(imageRot)
     imageMask = imageRot[:,:,3]
-    #imageRGB    = imageMask[:,:,:3]
     imageRGB   = imageRot[:,:,:3]
-    print( imageMask.shape, imageRGB.shape)
-
-    #if imageRGB.shape != imageRGB2.shape:
-    #    print(f'{key} have bad shape! {imageRGB2.shape}')
-    #    return 0
-    
     channel     = imageMask
     nAlpha      = normalizer(channel)
-
     nrgb        = normalizer(imageRGB)
     rgb         = nrgb*nAlpha[:,:,np.newaxis]
-    blank_image = np.zeros((512,512,3), dtype=type(rgb))#here the datatype may be a problem, double?
+    blank_image = np.zeros((512,512,3), dtype=type(rgb))
     blank_image[:rgb.shape[0],:rgb.shape[1],:] =rgb 
     rgb = blank_image
-
-    #make input
-    """
-    nrgb2       = normalizer(imageRGB2)    
-    rgb2        = nrgb2*nAlpha[:,:,np.newaxis]
-    blank_image2 = np.zeros((512,512,3), dtype=type(rgb2))#here the datatype may be a problem, double?
-    blank_image2[:rgb2.shape[0],:rgb2.shape[1],:] =rgb2 
-    rgb2 = blank_image2
-    """
     sourcePath = 'datasets/A/test/'+key+'.png'
-    #targetPath = path+'B/train/'+key+'.png'
     im = Image.fromarray(np.uint8((rgb)*255))
     im.save(sourcePath)
-    #cv2.imwrite(sourcePath, np.uint8( rgb*255)) #Here we saved it with values from 0 to 1.
-    #cv2.imwrite(sourcePath, np.uint8( rgb2*255))
-    #display(targetPath)
-    #display(sourcePath)
-
-    #if os.path.isfile(targetPath) and os.path.isfile(sourcePath):
     return str(os.path.isfile(sourcePath)) + f' Image {sourcePath} saved '
 
 
 
 def to3(item):
-    err = 'preprocessed correctly'
+    """Given an image with 4 channels, it multiplies the first 3 by the mask, and makes it 512 by 512"""
+    # item = "folder/key/AnImageClassButNotAnExtension"
+    err = '/n Image preprocessed correctly'
     if not item:
-        return 'no image received'+str(6)
-    
-    # (item['rotcor_crop_of_subject'], item['mask_of_subjects_face'])
-    # divvyup_store/170427/rotcor_crop_of_subject, divvyup_store/170427/final
+        return str(1) + 'no image received.'
+    folder = item.split('/')[0]    
     key = item.split('/')[1]
-    path = 'imgs/'
-    #path = '/home/ericd/image_colorization/corrected/datasets/final/'
-    temp = path+'temp/'
-    # Load Data
-    good = item #['img']
-    #bad = item[1] #['mask']
+    temp = 'imgs/temp/'
     goodP = temp+key+'.png'
-    #badP=temp+key+'.npy'
     try:
-        downloadBlob('divvyup_store', good.replace('divvyup_store/',''), goodP)
-        print(goodP)
+        downloadBlob(folder, item.replace(folder+'/',''), goodP)
     except Exception as e:
-        return str(e)+'-2'
+        return str(2) + str(e)
     try:
-        err = multiplier(goodP, key, path)
+        err = multiplier(goodP, key) + err
         os.remove(goodP)
-        #os.remove(badP)
     except Exception as e:
-        return str(e)+'-22'
+        return str(3)+str(e)
     return err
+
 def start(inputPath, outputFolder):
+    """Given the path of an image and a folder, downloads the image, preprocess it, and applies a NN, then uploads to the folder"""
+    # inputPath = "folder/key/AnImageClassButNotAnExtension"
+    # outputFolder = "folder/unknonw/folder/structure/"
     err = ''
     if inputPath and outputFolder:
         longList = inputPath
-        print(inputPath, outputFolder, '=input received')
+        
     else:
-        longList = []
-        print('No input image given!!!')
-        return 'No input image given!!!'
-        #longList = getData()
+        return ' Error 0: An input was missing! '
+    key = longList.split('/')[1]
+    assert len(longList.split('/')) == 3 #we assume the input comes from reconciliation
 
-    #assert len(longList[0].split('.')) == 1 
-    # In case we received several request per minute,  we can query them keep the line below
     try:
-        err = to3(longList)
+        err = to3(longList) #preprocess
     except Exception as e:
-        print(e)
-        return str(e)+'-33'
-    #with concurrent.futures.ProcessPoolExecutor(max_workers=8) as executor:
-    #    executor.map(to3,  longList)
+        return ' Error 1: '+ str(e) + err
+
     if os.path.isfile('datasets/A/test/'+longList.split('/')[1]+'.png'):
-        print(f'starting improving ilumination.  {datetime.now()-startTime} we preprocessed the image')   
-        os.system(f'python3 -u  test.py --dataroot datasets   --num_test {len(longList)}')
+        os.system(f'python3 -u  test.py --dataroot datasets   --num_test {len(longList)}')#run the nn
         try:
             (_, _, filenames) = next(os.walk('results/pix2512/test_latest/images/'))
-            print(f'len(filenames) file created')
             for file in filenames:
-                if 'fake' in file:
+                if 'fake' in file and key in file:
                     folder = outputFolder.split('/')
                     upload_blob(folder[0], f'results/pix2512/test_latest/images/{file}','/'.join(folder[1:])+'/'+file)
         except Exception as e:
-
             return str(err)+str(e)+'-5'
     else:
         return str(err) + 'file not processed'
- 
-    #os.system('rm -f "/home/ericd/tests/Dockerpix/docs/datasets/A/test/*"')
-    print('Program Ended')
     duration = datetime.now() - startTime
     return ("Completed. Duration was " + str(duration))
-
-
-
