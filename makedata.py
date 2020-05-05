@@ -80,6 +80,11 @@ def multiplier(goodP, key):
     blank_image[:rgb.shape[0],:rgb.shape[1],:] =rgb 
     rgb = blank_image
     sourcePath = 'datasets/A/test/'+key+'.png'
+    if not os.path.exists('datasets/A'):
+        os.makedirs('datasets/A')
+    if not os.path.exists('datasets/A/test'):
+        os.makedirs('datasets/A/test')
+
     im = Image.fromarray(np.uint8((rgb)*255))
     im.save(sourcePath)
     return str(os.path.isfile(sourcePath)) + f' Image {sourcePath} saved '
@@ -91,10 +96,10 @@ def to3(item):
     # item = "folder/key/AnImageClassButNotAnExtension"
     err = '/n Image preprocessed correctly'
     if not item:
-        return str(1) + 'no image received.'
+        return str(1) + ' no image received.'
     folder = item.split('/')[0]    
     key = item.split('/')[1]
-    temp = 'imgs/temp/'
+    temp = 'temp/'
     goodP = temp+key+'.png'
     try:
         downloadBlob(folder, item.replace(folder+'/',''), goodP)
@@ -134,8 +139,8 @@ def start(inputPath, outputFolder):
                     folder = outputFolder.split('/')
                     upload_blob(folder[0], f'results/pix2512/test_latest/images/{file}','/'.join(folder[1:])+'/'+file)
         except Exception as e:
-            return str(err)+str(e)+'-5'
+            return 'Error 5: '+str(err)+str(e)
     else:
-        return str(err) + 'file not processed'
+        return str(err) + '/n file not processed'
     duration = datetime.now() - startTime
     return ("Completed. Duration was " + str(duration))
