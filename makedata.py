@@ -137,15 +137,14 @@ def multiplier(goodP, key, path):
     #display(sourcePath)
 
     #if os.path.isfile(targetPath) and os.path.isfile(sourcePath):
-    return os.path.isfile(sourcePath) + f' Image {sourcePath} saved '
+    return str(os.path.isfile(sourcePath)) + f' Image {sourcePath} saved '
 
 
 
 def to3(item):
-    err = ''
+    err = 'preprocessed correctly'
     if not item:
-        print('no image received')
-        return 6
+        return 'no image received'+str(6)
     
     # (item['rotcor_crop_of_subject'], item['mask_of_subjects_face'])
     # divvyup_store/170427/rotcor_crop_of_subject, divvyup_store/170427/final
@@ -161,19 +160,20 @@ def to3(item):
     try:
         downloadBlob('divvyup_store', good.replace('divvyup_store/',''), goodP)
         print(goodP)
-        #downloadBlob('divvyup_store', bad.replace('divvyup_store/',''), badP)
+    except Exception as e:
+        return str(e)+'-2'
+    try:
         err = multiplier(goodP, key, path)
         os.remove(goodP)
         #os.remove(badP)
     except Exception as e:
-        print('error 2')
-        print(e)
-        return 2
+        return str(e)+'-22'
     return err
 def start(inputPath, outputFolder):
     err = ''
     if inputPath and outputFolder:
         longList = inputPath
+        print(inputPath, outputFolder, '=input received')
     else:
         longList = []
         print('No input image given!!!')
@@ -186,7 +186,7 @@ def start(inputPath, outputFolder):
         err = to3(longList)
     except Exception as e:
         print(e)
-        return (e)
+        return str(e)+'-33'
     #with concurrent.futures.ProcessPoolExecutor(max_workers=8) as executor:
     #    executor.map(to3,  longList)
     if os.path.isfile('datasets/A/test/'+longList.split('/')[1]+'.png'):
@@ -200,11 +200,10 @@ def start(inputPath, outputFolder):
                     folder = outputFolder.split('/')
                     upload_blob(folder[0], f'results/pix2512/test_latest/images/{file}','/'.join(folder[1:])+'/'+file)
         except Exception as e:
-            print('error 5')
-            print(e)
-            return e
+
+            return str(err)+str(e)+'-5'
     else:
-        return err + 'file not processed'
+        return str(err) + 'file not processed'
  
     #os.system('rm -f "/home/ericd/tests/Dockerpix/docs/datasets/A/test/*"')
     print('Program Ended')
