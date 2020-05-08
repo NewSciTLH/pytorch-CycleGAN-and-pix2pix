@@ -62,7 +62,7 @@ def normalizer(image):
     return n
 
 def multiplier(goodP, key):
-    """Given an image with 4 channels, it multiplies the first 3 by the mask, and makes it 512 by 512#"""
+    """Given an image with 4 channels, it multiplies the first 3 by the mask, and makes it 512 by 512"""
     #goodP path to image
     #key name
     try:
@@ -87,7 +87,7 @@ def multiplier(goodP, key):
 
     im = Image.fromarray(np.uint8((rgb)*255))
     im.save(sourcePath)
-    return str(os.path.isfile(sourcePath)) + f' Image {sourcePath} saved '
+    return str(os.path.isfile(sourcePath)) + f' Image {sourcePath} saved ' 
 
 
 
@@ -106,11 +106,36 @@ def to3(item):
     except Exception as e:
         return str(2) + str(e)
     try:
-        err = multiplier(goodP, key) + err
-        os.remove(goodP)
+        err = multiplier(goodP, key) + err 
+        #os.remove(goodP)
     except Exception as e:
         return str(3)+str(e)
     return err
+
+
+def comultiplier(finalP, premask, key):
+    """Given an image with 3 channels, an image with 4 channels, takes the channel and puts it on the 3 channel image"""
+    #goodP path to image
+    #key name
+    try:
+        image =  Image.open(finalP)
+        preMask = Image.open(premask)
+    except Exception as e:
+        return str(7)+ str(e)
+    imageRooth = np.array(image)
+    imageMask = np.array(preMask)
+    output = np.zeros((imageRooth.shape[0],imageRooth.shape[1],imageRooth.shape[2]+1))
+    mask = imageMask[:,:,3]
+    nAlpha      = normalizer(mask)
+    nrgb        = normalizer(imageRooth)
+    output[:,:,:3]   = nrgb
+    output[:,:,3]   = nAlpha
+    sourcePath = finalP.replace('_fake','')
+    
+    im = Image.fromarray(np.uint8((output)*255), 'RGBA')
+    im.save(sourcePath)
+    return '\n'+str(os.path.isfile(sourcePath)) + f' Image {sourcePath} saved ' 
+
 
 def start(inputPath, outputFolder):
     """Given the path of an image and a folder, downloads the image, preprocess it, and applies a NN, then uploads to the folder"""
@@ -126,7 +151,7 @@ def start(inputPath, outputFolder):
     assert len(longList.split('/')) == 3 #we assume the input comes from reconciliation
 
     try:
-        err = to3(longList) #preprocess
+        err = to3(longList) #preprocess 
     except Exception as e:
         return ' Error 1: '+ str(e) + err
 
@@ -136,11 +161,12 @@ def start(inputPath, outputFolder):
             (_, _, filenames) = next(os.walk('results/pix2512/test_latest/images/'))
             for file in filenames:
                 if 'fake' in file and key in file:
-                    folder = outputFolder.split('/')
-                    upload_blob(folder[0], f'results/pix2512/test_latest/images/{file}','/'.join(folder[1:])+'/'+file)
+                    folder = outputFolder.split('/')# now we add an alpha mask to this output
+                    err = err + comultiplier(f'results/pix2512/test_latest/images/{file}','temp/'+key+'.png', key)
+                    upload_blob(folder[0], f'results/pix2512/test_latest/images/{file}'.replace('_fake',''),'/'.join(folder[1:])+'/'+file.replace('_fake',''))
         except Exception as e:
             return 'Error 5: '+str(err)+str(e)
     else:
-        return str(err) + '/n file not processed'
+        return str(err) + '\n file not processed'
     duration = datetime.now() - startTime
     return ("Completed. Duration was " + str(duration))
