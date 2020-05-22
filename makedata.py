@@ -162,6 +162,7 @@ def start(inputPath, outputFolder):
                     folder = outputFolder.split('/')# now we add an alpha mask to this output
                     err = err + comultiplier(f'results/pix2512/test_latest/images/{file}','temp/'+key+'.png', key)
                     upload_blob(folder[0], f'results/pix2512/test_latest/images/{file}'.replace('_fake',''),'/'.join(folder[1:])+'/'+file.replace('_fake',''))
+                    os.remove('datasets/A/test/'+longList.split('/')[1]+'.png')
         except Exception as e:
             return 'Error 5: '+str(err)+str(e)
     else:
