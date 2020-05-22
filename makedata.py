@@ -71,11 +71,16 @@ def multiplier(goodP, key):
         return str(1)+ str(e)
 
 
-    imageRot = imageRot.resize((512,512))
     imageRot = np.array(imageRot)
-    imageRGB = imageRot[:,:,:3]
+    imageMask = imageRot[:,:,3]
+    imageRGB   = imageRot[:,:,:3]
+    channel     = imageMask
+    nAlpha      = normalizer(channel)
     nrgb        = normalizer(imageRGB)
-    rgb = nrgb
+    rgb         = nrgb*nAlpha[:,:,np.newaxis]
+    blank_image = np.zeros((512,512,3), dtype=type(rgb))
+    blank_image[:rgb.shape[0],:rgb.shape[1],:] =rgb 
+    rgb = blank_image
     sourcePath = 'datasets/A/test/'+key+'.png'
     if not os.path.exists('datasets/A'):
         os.makedirs('datasets/A')
