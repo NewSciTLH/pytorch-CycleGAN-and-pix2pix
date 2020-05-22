@@ -55,7 +55,7 @@ def save_image(image_numpy, image_path, end = False):
     """
     image_pil = Image.fromarray(image_numpy)
     if end:
-        image_pil = image_pil.crop((0, 0, 300, 350)) #((left, top, right, bottom)) 
+        image_pil=image_pil.resize((300,350))################edit 9:55, 
     image_pil.save(image_path)
 
 

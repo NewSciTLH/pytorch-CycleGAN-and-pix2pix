@@ -69,16 +69,13 @@ def multiplier(goodP, key):
         imageRot =  Image.open(goodP)
     except Exception as e:
         return str(1)+ str(e)
+
+
+    imageRot = imageRot.resize((512,512))
     imageRot = np.array(imageRot)
-    imageMask = imageRot[:,:,3]
-    imageRGB   = imageRot[:,:,:3]
-    channel     = imageMask
-    nAlpha      = normalizer(channel)
+    imageRGB = imageRot[:,:,:3]
     nrgb        = normalizer(imageRGB)
-    rgb         = nrgb*nAlpha[:,:,np.newaxis]
-    blank_image = np.zeros((512,512,3), dtype=type(rgb))
-    blank_image[:rgb.shape[0],:rgb.shape[1],:] =rgb 
-    rgb = blank_image
+    rgb = nrgb
     sourcePath = 'datasets/A/test/'+key+'.png'
     if not os.path.exists('datasets/A'):
         os.makedirs('datasets/A')
@@ -88,6 +85,7 @@ def multiplier(goodP, key):
     im = Image.fromarray(np.uint8((rgb)*255))
     im.save(sourcePath)
     return str(os.path.isfile(sourcePath)) + f' Image {sourcePath} saved ' 
+
 
 
 
