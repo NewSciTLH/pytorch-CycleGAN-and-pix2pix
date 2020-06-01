@@ -1,6 +1,6 @@
 # input pair (4 channel image 350 by 300 with a mask, path of folder to save)
 #output 3 channel image 512 by 512 with black background that is uploaded
-#Eric and Jeremy 5/5
+#Eric and Jeremy and Luke 5/31
 import numpy as np
 import os
 import sys
@@ -11,6 +11,7 @@ from google.cloud import storage
 from PIL import Image
 from datetime import datetime
 import argparse
+import skimage
 
 
 startTime = datetime.now()
@@ -70,7 +71,6 @@ def multiplier(goodP, key):
     except Exception as e:
         return str(1)+ str(e)
 
-
     imageRot = np.array(imageRot)
     imageMask = imageRot[:,:,3]
     imageRGB   = imageRot[:,:,:3]
@@ -116,6 +116,39 @@ def to3(item):
     return err
 
 
+def blur_edges2(inpt,k=5,c=6):
+    """post process to remove black border on the head"""
+    img=np.copy(inpt)
+    edges=skimage.filters.laplace(img[:,:,3],k)
+    for edge in np.argwhere(edges!=0):
+        img[edge[0],edge[1],0:3]=np.array([0,0,0])
+    new_edges=np.copy(edges)
+    counter=0
+    while True:
+        index=np.argwhere(new_edges!=0)
+        counter+=1
+        new_img=np.copy(img)
+        for edge in index:
+            img_mask=img[edge[0]-1:edge[0]+2,edge[1]-1:edge[1]+2,0:3]
+            edge_mask=new_edges[edge[0]-1:edge[0]+2,edge[1]-1:edge[1]+2]
+            temp=np.zeros(edge_mask.shape)
+            mask=np.logical_and(edge_mask==0,np.sum(img_mask,axis=2)!=0.0)
+            temp[mask]=1.0
+            mask=np.logical_and(edge_mask!=0,np.sum(img_mask,axis=2)!=0.0)
+            temp[mask]=1.0
+            temp[np.sum(img_mask,axis=2)<np.sum(img_mask[1,1])]=0.0
+            img_mask=img_mask*np.repeat(np.expand_dims(temp,2),3,axis=2)
+            if np.sum(temp)!=0: 
+                new_img[edge[0],edge[1],0:3]=np.sum(np.sum(img_mask,axis=0),axis=0)/np.sum(temp)
+                edges[edge[0],edge[1]]=0
+            else: 
+                continue;
+        new_edges=edges
+        if counter>c:
+            return new_img
+        img=new_img
+        
+        
 def comultiplier(finalP, premask, key):
     """Given an image with 3 channels, an image with 4 channels, takes the channel and puts it on the 3 channel image"""
     #goodP path to image
@@ -133,6 +166,7 @@ def comultiplier(finalP, premask, key):
     nrgb        = normalizer(imageRooth)
     output[:,:,:3]   = nrgb
     output[:,:,3]   = nAlpha
+    output = blur_edges2(output)
     sourcePath = finalP.replace('_fake','')
     
     im = Image.fromarray(np.uint8((output)*255), 'RGBA')
@@ -174,3 +208,8 @@ def start(inputPath, outputFolder):
         return str(err) + '\n file not processed'
     duration = datetime.now() - startTime
     return ("Completed. Duration was " + str(duration))
+
+if __name__ == '__main__':
+    start('divvyup_store/351983/processed', 'model_staging/colorization')
+    start('divvyup_store/351973/processed', 'model_staging/colorization')
+    start('divvyup_store/351943/processed', 'model_staging/colorization')
