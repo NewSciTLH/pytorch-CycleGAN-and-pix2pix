@@ -1,0 +1,23 @@
+apiVersion: apps/v1beta1
+kind: Deployment
+metadata:
+    name: colorization-algorithm
+spec:
+    replicas: 2
+    selector:
+      matchLabels:
+        app: colorization-algorithm
+    template:
+      metadata:
+        labels:
+          app: colorization-algorithm
+      spec:
+        containers:
+        - name: "colorization-algorithm-sha256"
+          image: "gcr.io/newsci-911-front-end/colorization-algorithm@sha256:latest"
+          ports:
+          - containerPort: 5000
+          envFrom:
+            - secretRef:
+                name: google-application-credentials
+        
