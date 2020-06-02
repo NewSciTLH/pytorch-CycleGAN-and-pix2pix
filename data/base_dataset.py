@@ -107,6 +107,8 @@ def get_transform(opt, params=None, grayscale=False, method=Image.BICUBIC, conve
         transform_list += [transforms.ToTensor()]
         if grayscale:
             transform_list += [transforms.Normalize((0.5,), (0.5,))]
+        elif opt.input_nc ==4:
+            transform_list += [transforms.Normalize((0.5, 0.5, 0.5, 0), (0.5, 0.5, 0.5, 1))]
         else:
             transform_list += [transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))]
     return transforms.Compose(transform_list)
