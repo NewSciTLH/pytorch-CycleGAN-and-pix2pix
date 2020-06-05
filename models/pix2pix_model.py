@@ -1,7 +1,7 @@
 import torch
 from .base_model import BaseModel
 from . import networks
-
+import numpy as np
 
 class Pix2PixModel(BaseModel):
     """ This class implements the pix2pix model, for learning a mapping from input images to output images given paired data.
@@ -79,10 +79,14 @@ class Pix2PixModel(BaseModel):
         The option 'direction' can be used to swap images in domain A and domain B.
         """
         AtoB = self.opt.direction == 'AtoB'
+        self.mask = input['B' if AtoB else 'A'][:,3,:,:]
+        self.ones = np.ones_like(self.mask)
+        self.coef = torch.from_numpy(np.stack([self.mask,self.mask,self.mask,self.ones], axis=1)).to(self.device)
         self.real_A = input['A' if AtoB else 'B'].to(self.device)
         self.real_B = input['B' if AtoB else 'A'].to(self.device)
         self.image_paths = input['A_paths' if AtoB else 'B_paths']
-
+        assert input['A' if AtoB else 'B'].shape == self.coef.shape  
+        #torch.Size([1, 4, 256, 256]) (4, 1, 4, 256)
     def forward(self):
         """Run forward pass; called by both functions <optimize_parameters> and <test>."""
         self.fake_B = self.netG(self.real_A)  # G(A)
@@ -90,12 +94,12 @@ class Pix2PixModel(BaseModel):
     def backward_D(self):
         """Calculate GAN loss for the discriminator"""
         # Fake; stop backprop to the generator by detaching fake_B
-        fake_AB = torch.cat((self.real_A, self.fake_B), 1)  # we use conditional GANs; we need to feed both input and output to the discriminator
+        fake_AB = torch.cat((self.real_A*self.coef, self.fake_B*self.coef), 1)  # we use conditional GANs; we need to feed both input and output to the discriminator
         #Here we feed masked_A and masked_B
         pred_fake = self.netD(fake_AB.detach())
         self.loss_D_fake = self.criterionGAN(pred_fake, False)
         # Real
-        real_AB = torch.cat((self.real_A, self.real_B), 1)
+        real_AB = torch.cat((self.real_A*self.coef, self.real_B*self.coef), 1)
         #Here we feed masked_A and masked_B
         pred_real = self.netD(real_AB)
         self.loss_D_real = self.criterionGAN(pred_real, True)
