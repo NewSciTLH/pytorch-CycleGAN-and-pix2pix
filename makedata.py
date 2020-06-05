@@ -1,6 +1,7 @@
 # input pair (4 channel image 350 by 300 with a mask, path of folder to save)
 #output 3 channel image 512 by 512 with black background that is uploaded
 #Eric and Jeremy and Luke 5/31
+#storage.Client.from_service_account_json("key.json")/ queryclient = bigquery.Client.from_service_account_json('bqkey.json')
 import numpy as np
 import os
 import sys
