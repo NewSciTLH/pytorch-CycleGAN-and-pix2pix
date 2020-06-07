@@ -42,7 +42,15 @@ for sp in splits:
             if args.use_AB:
                 name_AB = name_AB.replace('_A.', '.')  # remove _A
             path_AB = os.path.join(img_fold_AB, name_AB)
+            baseA = np.zeros((512,512,4))
+            baseB = np.zeros((512,512,4))
             im_A = cv2.imread(path_A, cv2.IMREAD_UNCHANGED) # 1) # python2: cv2.CV_LOAD_IMAGE_COLOR; python3: cv2.IMREAD_COLOR
             im_B = cv2.imread(path_B, cv2.IMREAD_UNCHANGED) # 1) # python2: cv2.CV_LOAD_IMAGE_COLOR; python3: cv2.IMREAD_COLOR
-            im_AB = np.concatenate([im_A, im_B], 1)
+            x,y,z = im_A.shape
+            baseA[:x,:y,:z] = im_A
+            x2,y2,z2 = im_B.shape
+            baseB[:x2,:y2,:z2] = im_B
+            #im_AB = np.concatenate([im_A, im_B], 1)
+            im_AB = np.concatenate([baseA, baseB], 1)
             cv2.imwrite(path_AB, im_AB)
+            
