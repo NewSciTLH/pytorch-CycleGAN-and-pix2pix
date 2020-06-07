@@ -1,6 +1,6 @@
 # input pair (4 channel image 350 by 300 with a mask, path of folder to save)
 #output 3 channel image 512 by 512 with black background that is uploaded
-#Eric and Jeremy and Luke 5/31
+#Eric and Jeremy and Luke 6/7
 import numpy as np
 import os
 import sys
@@ -16,13 +16,14 @@ import skimage
 
 startTime = datetime.now()
 os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = "key.json"
+#os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = "/home/ericd/storagekey.json" #testing
 
 def upload_blob(bucket_name, source_file_name, destination_blob_name):
     """Uploads a file to the bucket."""
     # bucket_name = "your-bucket-name"
     # source_file_name = "local/path/to/file"
     # destination_blob_name = "storage-object-name"
-
+    
     storage_client = storage.Client()
     bucket = storage_client.bucket(bucket_name)
     blob = bucket.blob(destination_blob_name)
@@ -94,14 +95,13 @@ def multiplier(goodP, key):
 
 
 
-def to3(item):
+def to3(item, key):
     """Given an image with 4 channels, it multiplies the first 3 by the mask, and makes it 512 by 512"""
     # item = "folder/key/AnImageClassButNotAnExtension"
     err = '/n Image preprocessed correctly'
     if not item:
         return str(1) + ' no image received.'
-    folder = item.split('/')[0]    
-    key = item.split('/')[1]
+    folder = item.split('/')[0]  
     temp = 'temp/'
     goodP = temp+key+'.png'
     try:
@@ -184,15 +184,15 @@ def start(inputPath, outputFolder):
         
     else:
         return ' Error 0: An input was missing! '
-    key = longList.split('/')[1]
-    assert len(longList.split('/')) == 3 #we assume the input comes from reconciliation
+    key = longList.split('/')[-2]
+    #assert len(longList.split('/')) == 3 #we assume the input comes from reconciliation
 
     try:
-        err = to3(longList) #preprocess 
+        err = to3(longList, key) #preprocess 
     except Exception as e:
         return ' Error 1: '+ str(e) + err
 
-    if os.path.isfile('datasets/A/test/'+longList.split('/')[1]+'.png'):
+    if os.path.isfile('datasets/A/test/'+key+'.png'):
         os.system(f'python3 -u  test.py --dataroot datasets   --num_test {len(longList)}')#run the nn
         try:
             (_, _, filenames) = next(os.walk('results/pix2512/test_latest/images/'))
@@ -201,7 +201,7 @@ def start(inputPath, outputFolder):
                     folder = outputFolder.split('/')# now we add an alpha mask to this output
                     err = err + comultiplier(f'results/pix2512/test_latest/images/{file}','temp/'+key+'.png', key)
                     upload_blob(folder[0], f'results/pix2512/test_latest/images/{file}'.replace('_fake',''),'/'.join(folder[1:])+'/'+file.replace('_fake',''))
-                    os.remove('datasets/A/test/'+longList.split('/')[1]+'.png')
+                    os.remove('datasets/A/test/'+key+'.png')
         except Exception as e:
             return 'Error 5: '+str(err)+str(e)
     else:
@@ -210,6 +210,17 @@ def start(inputPath, outputFolder):
     return ("Completed. Duration was " + str(duration))
 
 if __name__ == '__main__':
-    start('divvyup_store/351983/processed', 'model_staging/colorization')
-    start('divvyup_store/351973/processed', 'model_staging/colorization')
-    start('divvyup_store/351943/processed', 'model_staging/colorization')
+    #6/7 there is a change on the structure of input files from 
+    #divvyup_store/photoID/...
+    #to
+    #divvyup_store/productType/photoID/...
+    print('testing')
+    downloadBlob('model_staging','colorization/pix2pix/pix2512/latest_net_D.pth', 'ckpt/pix2512/latest_net_D.pth')
+    downloadBlob('model_staging','colorization/pix2pix/pix2512/latest_net_G.pth', 'ckpt/pix2512/latest_net_G.pth')
+    downloadBlob('model_staging','colorization/pix2pix/pix2512/loss_log.txt', 'ckpt/pix2512/loss_log.txt')
+    downloadBlob('model_staging','colorization/pix2pix/pix2512/test_opt.txt', 'ckpt/pix2512/test_opt.txt')
+    
+    start('divvyup_store/351283/processed', 'model_staging/colorization')
+    start('model_staging/colorization/45/processed', 'model_staging/colorization')
+    start('model_staging/colorization/pix2pix/processed', 'model_staging/colorization')
+    print('test ended')
