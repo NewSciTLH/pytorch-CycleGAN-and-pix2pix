@@ -52,4 +52,6 @@ for sp in splits:
             baseB[:x2,:y2,:z2] = im_B
             #im_AB = np.concatenate([im_A, im_B], 1)
             im_AB = np.concatenate([baseA, baseB], 1)
+            if path_AB[-3:] != 'png':
+                path_AB = path_AB+'.png'
             cv2.imwrite(path_AB, im_AB)
