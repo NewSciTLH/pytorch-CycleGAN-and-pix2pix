@@ -81,11 +81,11 @@ class Pix2PixModel(BaseModel):
         AtoB = self.opt.direction == 'AtoB'
         self.mask = input['B' if AtoB else 'A'][:,3,:,:]
         self.ones = np.ones_like(self.mask)
-        self.coef = torch.from_numpy(np.stack([self.mask,self.mask,self.mask,self.ones], axis=1)).to(self.device)
-        self.real_A = input['A' if AtoB else 'B'].to(self.device)
-        self.real_B = input['B' if AtoB else 'A'].to(self.device)
+        self.coef = torch.from_numpy(np.stack([self.mask,self.mask,self.mask], axis=1)).to(self.device)
+        self.real_A = input['A' if AtoB else 'B'][:,:3,:,:].to(self.device)
+        self.real_B = input['B' if AtoB else 'A'][:,:3,:,:].to(self.device)
         self.image_paths = input['A_paths' if AtoB else 'B_paths']
-        assert input['A' if AtoB else 'B'].shape == self.coef.shape  
+        #assert input['A' if AtoB else 'B'].shape == self.coef.shape  
         #torch.Size([1, 4, 256, 256]) (4, 1, 4, 256)
     def forward(self):
         """Run forward pass; called by both functions <optimize_parameters> and <test>."""

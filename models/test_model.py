@@ -57,7 +57,7 @@ class TestModel(BaseModel):
 
         We need to use 'single_dataset' dataset mode. It only load images from one domain.
         """
-        self.real = input['A'].to(self.device)
+        self.real = input['A'][:,:3,:,:].to(self.device)
         self.image_paths = input['A_paths']
 
     def forward(self):
