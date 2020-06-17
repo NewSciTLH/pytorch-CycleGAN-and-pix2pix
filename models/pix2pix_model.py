@@ -83,7 +83,7 @@ class Pix2PixModel(BaseModel):
         self.ones = np.ones_like(self.mask)
         self.coef = torch.from_numpy(np.stack([self.mask,self.mask,self.mask,self.ones], axis=1)).to(self.device)
         fake = input['A' if AtoB else 'B'].copy()
-        fake[:,3,:,:] = self.ones*.5
+        fake[:,3,:,:] = self.ones*.004
         self.real_A =  fake.to(self.device) #input['A' if AtoB else 'B'].to(self.device)
         self.real_B = input['B' if AtoB else 'A'].to(self.device)
         self.image_paths = input['A_paths' if AtoB else 'B_paths']
