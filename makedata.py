@@ -202,6 +202,7 @@ def start(inputPath, outputFolder):
                 err = err + comultiplier(f'results/pix2512/test_latest/images/{file}','temp/'+key+'.png', key)
                 upload_blob(folder[0], f'results/pix2512/test_latest/images/{file}'.replace('_fake',''),'/'.join(folder[1:])+'/'+file.replace('_fake',''))
                 os.remove('datasets/A/test/'+key+'.png')
+                os.remove('temp/'+key+'.png')
                 os.remove(f'results/pix2512/test_latest/images/{file}')
                 os.remove(f'results/pix2512/test_latest/images/{file}'.replace('_fake',''))
                 os.remove(f'results/pix2512/test_latest/images/{file}'.replace('_fake','_real'))                    
