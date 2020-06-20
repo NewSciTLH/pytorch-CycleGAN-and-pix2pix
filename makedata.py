@@ -1,6 +1,6 @@
 # input pair (4 channel image 350 by 300 with a mask, path of folder to save)
 #output 3 channel image 512 by 512 with black background that is uploaded
-#Eric and Jeremy and Luke 6/7
+#Eric and Jeremy and Luke 6/20/20
 import numpy as np
 import os
 import sys
@@ -196,12 +196,17 @@ def start(inputPath, outputFolder):
         os.system(f'python3 -u  test.py --dataroot datasets   --num_test {len(longList)}')#run the nn
         try:
             (_, _, filenames) = next(os.walk('results/pix2512/test_latest/images/'))
-            for file in filenames:
-                if 'fake' in file and key in file:
-                    folder = outputFolder.split('/')# now we add an alpha mask to this output
-                    err = err + comultiplier(f'results/pix2512/test_latest/images/{file}','temp/'+key+'.png', key)
-                    upload_blob(folder[0], f'results/pix2512/test_latest/images/{file}'.replace('_fake',''),'/'.join(folder[1:])+'/'+file.replace('_fake',''))
-                    os.remove('datasets/A/test/'+key+'.png')
+            file = f'{key}_fake.png'
+            if file in filenames:
+                folder = outputFolder.split('/')# now we add an alpha mask to this output
+                err = err + comultiplier(f'results/pix2512/test_latest/images/{file}','temp/'+key+'.png', key)
+                upload_blob(folder[0], f'results/pix2512/test_latest/images/{file}'.replace('_fake',''),'/'.join(folder[1:])+'/'+file.replace('_fake',''))
+                os.remove('datasets/A/test/'+key+'.png')
+                os.remove(f'results/pix2512/test_latest/images/{file}')
+                os.remove(f'results/pix2512/test_latest/images/{file}'.replace('_fake',''))
+                os.remove(f'results/pix2512/test_latest/images/{file}'.replace('_fake','_real'))                    
+            else:
+                return 'Error 6: file missing on results/pix2512/test_latest/images/' 
         except Exception as e:
             return 'Error 5: '+str(err)+str(e)
     else:
