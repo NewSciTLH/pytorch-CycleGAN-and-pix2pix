@@ -12,27 +12,13 @@ from PIL import Image
 from datetime import datetime
 import argparse
 import skimage
-
+from util.imageClass import focus3
+from util.datagen import getPairsData
+storage_client = storage.Client.from_service_account_json("/home/ericd/storagekey.json")
 
 startTime = datetime.now()
-os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = "key.json"
+#os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = "key.json"
 #os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = "/home/ericd/storagekey.json" #testing
-
-def upload_blob(bucket_name, source_file_name, destination_blob_name):
-    """Uploads a file to the bucket."""
-    # bucket_name = "your-bucket-name"
-    # source_file_name = "local/path/to/file"
-    # destination_blob_name = "storage-object-name"
-    
-    storage_client = storage.Client()
-    bucket = storage_client.bucket(bucket_name)
-    blob = bucket.blob(destination_blob_name)
-    blob.upload_from_filename(source_file_name)
-    print(
-        "File {} uploaded to {}.".format(
-            source_file_name, destination_blob_name
-        )
-    )
 
 
 def downloadBlob(bucket_name, source_blob_name, destination_file_name):
@@ -40,7 +26,7 @@ def downloadBlob(bucket_name, source_blob_name, destination_file_name):
     # bucket_name = "your-bucket-name"
     # source_blob_name = "storage-object-name"
     # destination_file_name = "local/path/to/file"
-    storage_client = storage.Client()
+    
     bucket = storage_client.bucket(bucket_name)
     blob = bucket.blob(source_blob_name)
     if not os.path.exists('ckpt/pix2512'):
@@ -104,8 +90,10 @@ def to3(item, key):
     folder = item.split('/')[0]  
     temp = 'temp/'
     goodP = temp+key+'.png'
+    goodP2 = temp+key+'f.png'
     try:
         downloadBlob(folder, item.replace(folder+'/',''), goodP)
+        downloadBlob(folder, item.replace(folder+'/','').replace('rotcor_crop_of_subject','final'), goodP2)
     except Exception as e:
         return str(2) + str(e)
     try:
@@ -174,12 +162,12 @@ def comultiplier(finalP, premask, key):
     return '\n'+str(os.path.isfile(sourcePath)) + f' Image {sourcePath} saved ' 
 
 
-def start(inputPath, outputFolder):
+def start(inputPath):
     """Given the path of an image and a folder, downloads the image, preprocess it, and applies a NN, then uploads to the folder"""
     # inputPath = "folder/key/AnImageClassButNotAnExtension"
     # outputFolder = "folder/unknonw/folder/structure/"
     err = ''
-    if inputPath and outputFolder:
+    if inputPath:
         longList = inputPath
         
     else:
@@ -192,35 +180,70 @@ def start(inputPath, outputFolder):
     except Exception as e:
         return ' Error 1: '+ str(e) + err
 
-    if os.path.isfile('datasets/A/test/'+key+'.png'):
-        os.system(f'python3 -u  test.py --dataroot datasets   --num_test {len(longList)}')#run the nn
-        try:
-            (_, _, filenames) = next(os.walk('results/pix2512/test_latest/images/'))
-            for file in filenames:
-                if 'fake' in file and key in file:
-                    folder = outputFolder.split('/')# now we add an alpha mask to this output
-                    err = err + comultiplier(f'results/pix2512/test_latest/images/{file}','temp/'+key+'.png', key)
-                    upload_blob(folder[0], f'results/pix2512/test_latest/images/{file}'.replace('_fake',''),'/'.join(folder[1:])+'/'+file.replace('_fake',''))
-                    os.remove('datasets/A/test/'+key+'.png')
-        except Exception as e:
-            return 'Error 5: '+str(err)+str(e)
+def finalizer(inputPath):  
+    err = ''
+    if inputPath:
+        longList = inputPath
+        
     else:
-        return str(err) + '\n file not processed'
-    duration = datetime.now() - startTime
-    return ("Completed. Duration was " + str(duration))
+        return ' Error 0: An input was missing! '
+    key = longList.split('/')[-2]
+    try:
+        print('ml applied')
+        (_, _, filenames) = next(os.walk('results/pix2512/test_latest/images/'))
+        file = f'{key}_fake.png'
+        if file in filenames:
+            #folder = outputFolder.split('/')# now we add an alpha mask to this output
+            print('we call comultiplier')
+            err = err + comultiplier(f'results/pix2512/test_latest/images/{file}','temp/'+key+'.png', key)
 
+            created =  f'results/pix2512/test_latest/images/{file}'.replace('_fake','')
+            ideal = f'temp/{key}f.png'
+            print('we call focus3')
+            focus3(created,ideal)
+            #upload_blob(folder[0], f'results/pix2512/test_latest/images/{file}'.replace('_fake',''),'/'.join(folder[1:])+'/'+file.replace('_fake',''))
+            #divvyup_store/368194/final
+            #          \
+            print('removing')
+            os.remove('datasets/A/test/'+key+'.png')
+            os.remove('temp/'+key+'.png')
+            os.remove('temp/'+key+'f.png')
+            os.remove(f'results/pix2512/test_latest/images/{file}')
+            os.remove(f'results/pix2512/test_latest/images/{file}'.replace('_fake',''))
+            os.remove(f'results/pix2512/test_latest/images/{file}'.replace('_fake','_real'))
+        else:
+            print( f'{key}_fake.png missing')
+    except Exception as e:
+        return 'Error 5: '+str(err)+str(e)
+    
 if __name__ == '__main__':
     #6/7 there is a change on the structure of input files from 
     #divvyup_store/photoID/...
     #to
     #divvyup_store/productType/photoID/...
     print('testing')
-    downloadBlob('model_staging','colorization/pix2pix/pix2512/latest_net_D.pth', 'ckpt/pix2512/latest_net_D.pth')
-    downloadBlob('model_staging','colorization/pix2pix/pix2512/latest_net_G.pth', 'ckpt/pix2512/latest_net_G.pth')
-    downloadBlob('model_staging','colorization/pix2pix/pix2512/loss_log.txt', 'ckpt/pix2512/loss_log.txt')
-    downloadBlob('model_staging','colorization/pix2pix/pix2512/test_opt.txt', 'ckpt/pix2512/test_opt.txt')
+    #downloadBlob('model_staging','colorization/pix2pix/pix2512/latest_net_D.pth', 'ckpt/pix2512/latest_net_D.pth')
+    #downloadBlob('model_staging','colorization/pix2pix/pix2512/latest_net_G.pth', 'ckpt/pix2512/latest_net_G.pth')
+    #downloadBlob('model_staging','colorization/pix2pix/pix2512/loss_log.txt', 'ckpt/pix2512/loss_log.txt')
+    #downloadBlob('model_staging','colorization/pix2pix/pix2512/test_opt.txt', 'ckpt/pix2512/test_opt.txt')
+    #divvyup_store/368194/rotcor_crop_of_subject divvyup_store/368194/final
+    Q = ''' SELECT  rotcor_crop_of_subject
+    FROM  divvyup_metadata.metadata
+    WHERE mask_quality IN ('good','okay') AND rotcor_crop_of_subject IS NOT NULL
+    '''
+    total =  getPairsData(Q, 'rotcor_crop_of_subject')
+    size = 25
+    for i in range(int(len(total)/size)+1):
+        toDo =  total[i:i+size]
+        with concurrent.futures.ProcessPoolExecutor(max_workers=4) as executor:
+            executor.map(start,toDo)
+        
+        os.system(f'python3 -u  test.py --dataroot datasets   --num_test {len(toDo)}')#run the nn
+        with concurrent.futures.ProcessPoolExecutor(max_workers=4) as executor:
+            executor.map(finalizer,toDo)
     
-    start('divvyup_store/351283/processed', 'model_staging/colorization')
-    start('model_staging/colorization/45/processed', 'model_staging/colorization')
-    start('model_staging/colorization/pix2pix/processed', 'model_staging/colorization')
-    print('test ended')
+    duration = datetime.now() - startTime
+    print("Completed. Duration was " + str(duration))
+    
+    
+    
