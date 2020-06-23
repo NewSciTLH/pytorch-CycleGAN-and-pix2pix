@@ -15,8 +15,8 @@ import skimage
 
 
 startTime = datetime.now()
-os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = "key.json"
-#os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = "/home/ericd/storagekey.json" #testing
+#os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = "key.json"
+os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = "/home/ericd/storagekey.json" #testing
 
 def upload_blob(bucket_name, source_file_name, destination_blob_name):
     """Uploads a file to the bucket."""
@@ -78,7 +78,7 @@ def multiplier(goodP, key):
     channel     = imageMask
     nAlpha      = normalizer(channel)
     nrgb        = normalizer(imageRGB)
-    rgb         = nrgb*nAlpha[:,:,np.newaxis]
+    rgb         = nrgb #*nAlpha[:,:,np.newaxis]
     blank_image = np.zeros((512,512,3), dtype=type(rgb))
     blank_image[:rgb.shape[0],:rgb.shape[1],:] =rgb 
     rgb = blank_image
@@ -166,7 +166,7 @@ def comultiplier(finalP, premask, key):
     nrgb        = normalizer(imageRooth)
     output[:,:,:3]   = nrgb
     output[:,:,3]   = nAlpha
-    output = blur_edges2(output)
+    #output = blur_edges2(output)
     sourcePath = finalP.replace('_fake','')
     
     im = Image.fromarray(np.uint8((output)*255), 'RGBA')
@@ -221,10 +221,9 @@ if __name__ == '__main__':
     #to
     #divvyup_store/productType/photoID/...
     print('testing')
-    downloadBlob('model_staging','colorization/pix2pix/pix2512/latest_net_D.pth', 'ckpt/pix2512/latest_net_D.pth')
-    downloadBlob('model_staging','colorization/pix2pix/pix2512/latest_net_G.pth', 'ckpt/pix2512/latest_net_G.pth')
-    downloadBlob('model_staging','colorization/pix2pix/pix2512/loss_log.txt', 'ckpt/pix2512/loss_log.txt')
-    downloadBlob('model_staging','colorization/pix2pix/pix2512/test_opt.txt', 'ckpt/pix2512/test_opt.txt')
+    downloadBlob('model_staging','colorization/pix34wmask/latest_net_D.pth', 'ckpt/pix2512/latest_net_D.pth')
+    downloadBlob('model_staging','colorization/pix34wmask/latest_net_G.pth', 'ckpt/pix2512/latest_net_G.pth')
+    downloadBlob('model_staging','colorization/pix34wmask/test_opt.txt', 'ckpt/pix2512/test_opt.txt')
     
     start('divvyup_store/351283/processed', 'model_staging/colorization')
     start('model_staging/colorization/45/processed', 'model_staging/colorization')
