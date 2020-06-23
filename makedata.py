@@ -15,8 +15,8 @@ import skimage
 
 
 startTime = datetime.now()
-#os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = "key.json"
-os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = "/home/ericd/storagekey.json" #testing
+os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = "key.json"
+#os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = "/home/ericd/storagekey.json" #testing
 
 def upload_blob(bucket_name, source_file_name, destination_blob_name):
     """Uploads a file to the bucket."""
