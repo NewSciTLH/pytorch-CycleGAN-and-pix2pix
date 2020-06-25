@@ -7,7 +7,6 @@ from . import util, html
 from subprocess import Popen, PIPE
 #from scipy.misc import imresize
 from skimage.transform import resize
-
 if sys.version_info[0] == 2:
     VisdomExceptionBase = Exception
 else:
@@ -209,7 +208,7 @@ class Visualizer():
             self.create_visdom_connections()
 
     # losses: same format as |losses| of plot_current_losses
-    def print_current_losses(self, epoch, iters, losses, t_comp, t_data):
+    def print_current_losses(self, epoch, iters, losses, t_comp, t_data, writer, nImg):
         """print current losses on console; also save the losses to the disk
 
         Parameters:
@@ -222,7 +221,11 @@ class Visualizer():
         message = '(epoch: %d, iters: %d, time: %.3f, data: %.3f) ' % (epoch, iters, t_comp, t_data)
         for k, v in losses.items():
             message += '%s: %.3f ' % (k, v)
-
+        writer.add_scalar('SSIM/train', losses['G_ssim'], int(iters)+nImg*(int(epoch)-1))
+        writer.add_scalar('G_GAN/train', losses['G_GAN'], int(iters)+nImg*(int(epoch)-1))
+        writer.add_scalar('G_L1/train', losses['G_L1'], int(iters)+nImg*(int(epoch)-1))
+        writer.add_scalar('D_real/train', losses['D_real'], int(iters)+nImg*(int(epoch)-1))
+        writer.add_scalar('D_fake/train', losses['D_fake'], int(iters)+nImg*(int(epoch)-1))
         print(message)  # print the message
         with open(self.log_name, "a") as log_file:
             log_file.write('%s\n' % message)  # save the message

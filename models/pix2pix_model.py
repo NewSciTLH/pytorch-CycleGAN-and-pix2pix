@@ -81,9 +81,10 @@ class Pix2PixModel(BaseModel):
         AtoB = self.opt.direction == 'AtoB'
         self.mask = input['B' if AtoB else 'A'][:,3,:,:]
         self.ones = np.ones_like(self.mask)
+        self.zeros = np.ones_like(self.mask)
         self.coef = torch.from_numpy(np.stack([self.mask,self.mask,self.mask,self.ones], axis=1)).to(self.device)
         fake = input['A' if AtoB else 'B'].clone()
-        fake[:,3,:,:] = torch.from_numpy(self.ones/255)
+        fake[:,3,:,:] = torch.from_numpy(self.zeros)# edited
         self.real_A =  fake.to(self.device) #input['A' if AtoB else 'B'].to(self.device)
         self.real_B = input['B' if AtoB else 'A'].to(self.device)
         self.image_paths = input['A_paths' if AtoB else 'B_paths']
@@ -92,7 +93,7 @@ class Pix2PixModel(BaseModel):
     def forward(self):
         """Run forward pass; called by both functions <optimize_parameters> and <test>."""
         self.fake_B = self.netG(self.real_A)  # G(A)
-        self.loss_G_ssim = pytorch_ssim.ssim(self.real_B, self.fake_B) 
+        self.loss_G_ssim = pytorch_ssim.ssim(self.real_B*self.coef, self.fake_B*self.coef) 
         #self.masked_B will take the mask of real_A and apply it to fake_B   
     def backward_D(self):
         """Calculate GAN loss for the discriminator"""
