@@ -54,6 +54,7 @@ class BaseOptions():
         parser.add_argument('--load_iter', type=int, default='0', help='which iteration to load? if load_iter > 0, the code will load models by iter_[load_iter]; otherwise, the code will load models by [epoch]')
         parser.add_argument('--verbose', action='store_true', help='if specified, print more debugging information')
         parser.add_argument('--suffix', default='', type=str, help='customized suffix: opt.name = opt.name + suffix: e.g., {model}_{netG}_size{load_size}')
+        parser.add_argument('--dif_data_augm', type=str, default='', help='differential data augmentation currenly only for pix2pix models. [color | translation | cutout | color,cutout|...|color,translation,cutout]')
         self.initialized = True
         return parser
 
