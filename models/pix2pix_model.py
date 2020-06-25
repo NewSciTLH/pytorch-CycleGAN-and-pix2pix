@@ -3,6 +3,17 @@ from .base_model import BaseModel
 from . import networks
 import numpy as np
 import pytorch_ssim
+from util.DiffAugment_pytorch import DiffAugment
+# from DiffAugment_tf import DiffAugment
+policy = 'translation,cutout' # If your dataset is as small as ours (e.g.,
+# 100 images), we recommend using the strongest DiffAugment:  Color + Translation + Cutout.
+# For large datasets, try using a subset of transformations in ['color', 'translation', 'cutout'].
+# Welcome to discover more DiffAugment transformations!
+
+...
+# Training loop
+
+
 class Pix2PixModel(BaseModel):
     """ This class implements the pix2pix model, for learning a mapping from input images to output images given paired data.
 
@@ -100,12 +111,12 @@ class Pix2PixModel(BaseModel):
         # Fake; stop backprop to the generator by detaching fake_B
         fake_AB = torch.cat((self.real_A*self.coef, self.fake_B*self.coef), 1)  # we use conditional GANs; we need to feed both input and output to the discriminator
         #Here we feed masked_A and masked_B
-        pred_fake = self.netD(fake_AB.detach())
+        pred_fake = self.netD(DiffAugment(fake_AB.detach(), policy=policy))
         self.loss_D_fake = self.criterionGAN(pred_fake, False)
         # Real
         real_AB = torch.cat((self.real_A*self.coef, self.real_B*self.coef), 1)
         #Here we feed masked_A and masked_B
-        pred_real = self.netD(real_AB)
+        pred_real = self.netD(DiffAugment(real_AB, policy=policy))
         self.loss_D_real = self.criterionGAN(pred_real, True)
         # combine loss and calculate gradients
         self.loss_D = (self.loss_D_fake + self.loss_D_real) * 0.5
