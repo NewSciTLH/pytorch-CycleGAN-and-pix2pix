@@ -86,7 +86,7 @@ if __name__ == '__main__':
                 model.save_networks(save_suffix)
 
             iter_data_time = time.time()
-        img_grid = torchvision.utils.make_grid(model.fake_B)
+        img_grid = torchvision.utils.make_grid([model.fake_B[:,:3,:,:],model.fake_B[:,3,:,:]])
         writer.add_image(f'epoch {epoch}', img_grid)
     
         if epoch % opt.save_epoch_freq == 0:              # cache our model every <save_epoch_freq> epochs
