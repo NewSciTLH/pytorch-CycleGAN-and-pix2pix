@@ -15,8 +15,8 @@ import skimage
 
 
 startTime = datetime.now()
-os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = "key.json"
-#os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = "/home/ericd/storagekey.json" #testing
+#os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = "key.json"
+os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = "/home/ericd/storagekey.json" #testing
 
 def upload_blob(bucket_name, source_file_name, destination_blob_name):
     """Uploads a file to the bucket."""
@@ -174,7 +174,7 @@ def comultiplier(finalP, premask, key):
     return '\n'+str(os.path.isfile(sourcePath)) + f' Image {sourcePath} saved ' 
 
 
-def start(inputPath, outputFolder):
+def start(inputPath, outputFolder, name):
     """Given the path of an image and a folder, downloads the image, preprocess it, and applies a NN, then uploads to the folder"""
     # inputPath = "folder/key/AnImageClassButNotAnExtension"
     # outputFolder = "folder/unknonw/folder/structure/"
@@ -193,19 +193,19 @@ def start(inputPath, outputFolder):
         return ' Error 1: '+ str(e) + err
 
     if os.path.isfile('datasets/A/test/'+key+'.png'):
-        os.system(f'python3 -u  test.py --dataroot datasets   --num_test {len(longList)}')#run the nn
+        os.system(f'python3 -u  test.py --dataroot datasets --name {name} --gpu_ids -1  --num_test {len(longList)}')#run the nn
         try:
-            (_, _, filenames) = next(os.walk('results/pix2512/test_latest/images/'))
+            (_, _, filenames) = next(os.walk(f'results/{new}/test_latest/images/'))
             file = f'{key}_fake.png'
             if file in filenames:
                 folder = outputFolder.split('/')# now we add an alpha mask to this output
-                err = err + comultiplier(f'results/pix2512/test_latest/images/{file}','temp/'+key+'.png', key)
-                upload_blob(folder[0], f'results/pix2512/test_latest/images/{file}'.replace('_fake',''),'/'.join(folder[1:])+'/'+file.replace('_fake',''))
-                os.remove('datasets/A/test/'+key+'.png')
-                os.remove('temp/'+key+'.png')
-                os.remove(f'results/pix2512/test_latest/images/{file}')
-                os.remove(f'results/pix2512/test_latest/images/{file}'.replace('_fake',''))
-                os.remove(f'results/pix2512/test_latest/images/{file}'.replace('_fake','_real'))                    
+                err = err + comultiplier(f'results/{name}/test_latest/images/{file}','temp/'+key+'.png', key)
+                upload_blob(folder[0], f'results/{name}/test_latest/images/{file}'.replace('_fake',''),'/'.join(folder[1:])+'/'+file.replace('_fake',''))
+                #os.remove('datasets/A/test/'+key+'.png')
+                #os.remove('temp/'+key+'.png')
+                #os.remove(f'results/{name}/test_latest/images/{file}')
+                #os.remove(f'results/{name}/test_latest/images/{file}'.replace('_fake',''))
+                #os.remove(f'results/{name}/test_latest/images/{file}'.replace('_fake','_real'))                    
             else:
                 return 'Error 6: file missing on results/pix2512/test_latest/images/' 
         except Exception as e:
@@ -220,12 +220,15 @@ if __name__ == '__main__':
     #divvyup_store/photoID/...
     #to
     #divvyup_store/productType/photoID/...
-    print('testing')
-    downloadBlob('model_staging','colorization/pix34wmask/latest_net_D.pth', 'ckpt/pix2512/latest_net_D.pth')
-    downloadBlob('model_staging','colorization/pix34wmask/latest_net_G.pth', 'ckpt/pix2512/latest_net_G.pth')
-    downloadBlob('model_staging','colorization/pix34wmask/test_opt.txt', 'ckpt/pix2512/test_opt.txt')
-    
-    start('divvyup_store/351283/processed', 'model_staging/colorization')
-    start('model_staging/colorization/45/processed', 'model_staging/colorization')
-    start('model_staging/colorization/pix2pix/processed', 'model_staging/colorization')
+    #print('testing')
+    #downloadBlob('model_staging','colorization/pix34wmask/latest_net_D.pth', 'ckpt/pix2512/latest_net_D.pth')
+    #downloadBlob('model_staging','colorization/pix34wmask/latest_net_G.pth', 'ckpt/pix2512/latest_net_G.pth')
+    #downloadBlob('model_staging','colorization/pix34wmask/test_opt.txt', 'ckpt/pix2512/test_opt.txt')
+    #toTest=['1512','224668','18101','2515']
+    #toTest=['232947','266919','157338']
+    toTest = ['18101']
+    #toTest = ['97200','95025','45980','42346','351283','322171','32002','291675','27575','25942','24223','239948','218158','177086','120427','1186']
+    for value in toTest:
+        start(f'divvyup_store/{value}/rotcor_crop_of_subject', 'model_staging/colorization/July/new',name ='new')
+    print('program finished')    
     print('test ended')

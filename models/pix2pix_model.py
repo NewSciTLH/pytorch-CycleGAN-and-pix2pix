@@ -1,6 +1,10 @@
 import torch
 from .base_model import BaseModel
 from . import networks
+import pytorch_ssim
+import pytorch_msssim
+from util.DiffAugment_pytorch import DiffAugment
+import numpy as np
 
 
 class Pix2PixModel(BaseModel):
@@ -43,8 +47,10 @@ class Pix2PixModel(BaseModel):
             opt (Option class)-- stores all the experiment flags; needs to be a subclass of BaseOptions
         """
         BaseModel.__init__(self, opt)
+         # specify the smooth data augmentation, default is none, options include translation, change on color and random cutout 
+        self.dif_data_augm = opt.dif_data_augm
         # specify the training losses you want to print out. The training/test scripts will call <BaseModel.get_current_losses>
-        self.loss_names = ['G_GAN', 'G_L1', 'D_real', 'D_fake']
+        self.loss_names = ['G_GAN', 'G_L1', 'D_real', 'D_fake','G_ssim','G_msssim']
         # specify the images you want to save/display. The training/test scripts will call <BaseModel.get_current_visuals>
         self.visual_names = ['real_A', 'fake_B', 'real_B']
         # specify the models you want to save to the disk. The training/test scripts will call <BaseModel.save_networks> and <BaseModel.load_networks>
@@ -66,7 +72,7 @@ class Pix2PixModel(BaseModel):
             self.criterionL1 = torch.nn.L1Loss()
             # initialize optimizers; schedulers will be automatically created by function <BaseModel.setup>.
             self.optimizer_G = torch.optim.Adam(self.netG.parameters(), lr=opt.lr, betas=(opt.beta1, 0.999))
-            self.optimizer_D = torch.optim.Adam(self.netD.parameters(), lr=opt.lr, betas=(opt.beta1, 0.999))
+            self.optimizer_D = torch.optim.Adam(self.netD.parameters(), lr=4*float(opt.lr), betas=(opt.beta1, 0.999))
             self.optimizers.append(self.optimizer_G)
             self.optimizers.append(self.optimizer_D)
 
@@ -79,24 +85,38 @@ class Pix2PixModel(BaseModel):
         The option 'direction' can be used to swap images in domain A and domain B.
         """
         AtoB = self.opt.direction == 'AtoB'
-        self.real_A = input['A' if AtoB else 'B'].to(self.device)
-        self.real_B = input['B' if AtoB else 'A'].to(self.device)
+        self.mask = input['B' if AtoB else 'A'][:,3,:,:]
+        self.ones = np.ones_like(self.mask)
+        self.coef = torch.from_numpy(np.stack([self.mask,self.mask,self.mask], axis=1)).to(self.device)
+        self.real_A = input['A' if AtoB else 'B'][:,:3,:,:].to(self.device)
+        self.real_B = input['B' if AtoB else 'A'][:,:3,:,:].to(self.device)
         self.image_paths = input['A_paths' if AtoB else 'B_paths']
-
+        #assert input['A' if AtoB else 'B'].shape == self.coef.shape  
+        #torch.Size([1, 4, 256, 256]) (4, 1, 4, 256)
     def forward(self):
         """Run forward pass; called by both functions <optimize_parameters> and <test>."""
         self.fake_B = self.netG(self.real_A)  # G(A)
-
+        self.loss_G_msssim = pytorch_msssim.msssim(self.real_B*self.coef, self.fake_B*self.coef)
+        self.loss_G_ssim = pytorch_ssim.ssim(self.real_B*self.coef, self.fake_B*self.coef)
+        #self.masked_B will take the mask of real_A and apply it to fake_B   
     def backward_D(self):
         """Calculate GAN loss for the discriminator"""
+        # smooth data aumentation policy 
+        policy = self.dif_data_augm
         # Fake; stop backprop to the generator by detaching fake_B
-        fake_AB = torch.cat((self.real_A, self.fake_B), 1)  # we use conditional GANs; we need to feed both input and output to the discriminator
-        pred_fake = self.netD(fake_AB.detach())
+        fake_AB = torch.cat((self.real_A*self.coef, self.fake_B*self.coef), 1)  # we use conditional GANs; we need to feed both input and output to the discriminator
+        #Here we feed masked_A and masked_B
+        #pred_fake = self.netD(fake_AB.detach())
+        fake_AB = DiffAugment(fake_AB.detach(), policy=policy) # by default we don't modify the data 
+        pred_fake = self.netD(fake_AB) 
+        self.loss_D_fake = self.criterionGAN(pred_fake, False)
         self.loss_D_fake = self.criterionGAN(pred_fake, False)
         # Real
-        real_AB = torch.cat((self.real_A, self.real_B), 1)
+        real_AB = torch.cat((self.real_A*self.coef, self.real_B*self.coef), 1)
+        real_AB = DiffAugment(real_AB, policy=policy)  # by default we don't modify the data
+        #Here we feed masked_A and masked_B
         pred_real = self.netD(real_AB)
-        self.loss_D_real = self.criterionGAN(pred_real, True)
+        self.loss_D_real = self.criterionGAN(pred_real, .9)
         # combine loss and calculate gradients
         self.loss_D = (self.loss_D_fake + self.loss_D_real) * 0.5
         self.loss_D.backward()
@@ -105,6 +125,7 @@ class Pix2PixModel(BaseModel):
         """Calculate GAN and L1 loss for the generator"""
         # First, G(A) should fake the discriminator
         fake_AB = torch.cat((self.real_A, self.fake_B), 1)
+        fake_AB = DiffAugment(fake_AB, policy=self.dif_data_augm)
         pred_fake = self.netD(fake_AB)
         self.loss_G_GAN = self.criterionGAN(pred_fake, True)
         # Second, G(A) = B
