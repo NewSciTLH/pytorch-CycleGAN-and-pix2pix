@@ -12,7 +12,7 @@ from PIL import Image
 from datetime import datetime
 import argparse
 import skimage
-
+#import pdb
 
 startTime = datetime.now()
 #os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = "key.json"
@@ -104,49 +104,19 @@ def to3(item, key):
     folder = item.split('/')[0]  
     temp = 'temp/'
     goodP = temp+key+'.png'
+    fP = temp+'f'+key+'.png'
     try:
         downloadBlob(folder, item.replace(folder+'/',''), goodP)
+        downloadBlob(folder, item.replace(folder+'/','').replace('processed','final'), fP)
     except Exception as e:
         return str(2) + str(e)
     try:
-        err = multiplier(goodP, key) + err 
-        #os.remove(goodP)
+        err = multiplier(goodP, key) + err  #we make the image 512x512
     except Exception as e:
         return str(3)+str(e)
     return err
 
 
-def blur_edges2(inpt,k=5,c=6):
-    """post process to remove black border on the head"""
-    img=np.copy(inpt)
-    edges=skimage.filters.laplace(img[:,:,3],k)
-    for edge in np.argwhere(edges!=0):
-        img[edge[0],edge[1],0:3]=np.array([0,0,0])
-    new_edges=np.copy(edges)
-    counter=0
-    while True:
-        index=np.argwhere(new_edges!=0)
-        counter+=1
-        new_img=np.copy(img)
-        for edge in index:
-            img_mask=img[edge[0]-1:edge[0]+2,edge[1]-1:edge[1]+2,0:3]
-            edge_mask=new_edges[edge[0]-1:edge[0]+2,edge[1]-1:edge[1]+2]
-            temp=np.zeros(edge_mask.shape)
-            mask=np.logical_and(edge_mask==0,np.sum(img_mask,axis=2)!=0.0)
-            temp[mask]=1.0
-            mask=np.logical_and(edge_mask!=0,np.sum(img_mask,axis=2)!=0.0)
-            temp[mask]=1.0
-            temp[np.sum(img_mask,axis=2)<np.sum(img_mask[1,1])]=0.0
-            img_mask=img_mask*np.repeat(np.expand_dims(temp,2),3,axis=2)
-            if np.sum(temp)!=0: 
-                new_img[edge[0],edge[1],0:3]=np.sum(np.sum(img_mask,axis=0),axis=0)/np.sum(temp)
-                edges[edge[0],edge[1]]=0
-            else: 
-                continue;
-        new_edges=edges
-        if counter>c:
-            return new_img
-        img=new_img
         
         
 def comultiplier(finalP, premask, key):
@@ -166,7 +136,6 @@ def comultiplier(finalP, premask, key):
     nrgb        = normalizer(imageRooth)
     output[:,:,:3]   = nrgb
     output[:,:,3]   = nAlpha
-    #output = blur_edges2(output)
     sourcePath = finalP.replace('_fake','')
     
     im = Image.fromarray(np.uint8((output)*255), 'RGBA')
@@ -174,18 +143,17 @@ def comultiplier(finalP, premask, key):
     return '\n'+str(os.path.isfile(sourcePath)) + f' Image {sourcePath} saved ' 
 
 
-def start(inputPath, outputFolder, name):
+def start(inputPath, outputFolder, name ='new', exp = 'latest'):
     """Given the path of an image and a folder, downloads the image, preprocess it, and applies a NN, then uploads to the folder"""
     # inputPath = "folder/key/AnImageClassButNotAnExtension"
     # outputFolder = "folder/unknonw/folder/structure/"
+    
     err = ''
     if inputPath and outputFolder:
-        longList = inputPath
-        
+        longList = inputPath        
     else:
         return ' Error 0: An input was missing! '
     key = longList.split('/')[-2]
-    #assert len(longList.split('/')) == 3 #we assume the input comes from reconciliation
 
     try:
         err = to3(longList, key) #preprocess 
@@ -193,21 +161,25 @@ def start(inputPath, outputFolder, name):
         return ' Error 1: '+ str(e) + err
 
     if os.path.isfile('datasets/A/test/'+key+'.png'):
-        os.system(f'python3 -u  test.py --dataroot datasets --name {name} --gpu_ids -1  --num_test {len(longList)}')#run the nn
+        os.system(f'python3 -u  test.py --dataroot datasets --name {name} --gpu_ids -1 --epoch {exp} ')#run the nn
         try:
-            (_, _, filenames) = next(os.walk(f'results/{name}/test_latest/images/'))
+            (_, _, filenames) = next(os.walk(f'results/{name}/test_{exp}/images/'))
             file = f'{key}_fake.png'
             if file in filenames:
                 folder = outputFolder.split('/')# now we add an alpha mask to this output
-                err = err + comultiplier(f'results/{name}/test_latest/images/{file}','temp/'+key+'.png', key)
-                upload_blob(folder[0], f'results/{name}/test_latest/images/{file}'.replace('_fake',''),'/'.join(folder[1:])+'/'+file.replace('_fake',''))
-                #os.remove('datasets/A/test/'+key+'.png')
-                #os.remove('temp/'+key+'.png')
-                #os.remove(f'results/{name}/test_latest/images/{file}')
-                #os.remove(f'results/{name}/test_latest/images/{file}'.replace('_fake',''))
-                #os.remove(f'results/{name}/test_latest/images/{file}'.replace('_fake','_real'))                    
+                err = err + comultiplier(f'results/{name}/test_{exp}/images/{file}','temp/'+key+'.png', key)
+                
+                upload_blob(folder[0], f'results/{name}/test_{exp}/images/{file}'.replace('_fake',''),'/'.join(folder[1:])+'/'+file.replace('_fake',''))
+                upload_blob(folder[0], 'temp/'+key+'.png','/'.join(folder[1:])+'/'+file.replace('_fake','_input'))
+                upload_blob(folder[0], 'temp/f'+key+'.png','/'.join(folder[1:])+'/'+file.replace('_fake','_ideal'))
+                os.remove('datasets/A/test/'+key+'.png')
+                os.remove('temp/'+key+'.png')
+                os.remove('temp/f'+key+'.png')
+                os.remove(f'results/{name}/test_{exp}/images/{file}')
+                os.remove(f'results/{name}/test_{exp}/images/{file}'.replace('_fake',''))
+                os.remove(f'results/{name}/test_{exp}/images/{file}'.replace('_fake','_real'))                    
             else:
-                return 'Error 6: file missing on results/pix2512/test_latest/images/' 
+                return f'Error 6: file missing on results/{name}/test_{exp}/images/' 
         except Exception as e:
             return 'Error 5: '+str(err)+str(e)
     else:
@@ -216,19 +188,45 @@ def start(inputPath, outputFolder, name):
     return ("Completed. Duration was " + str(duration))
 
 if __name__ == '__main__':
-    #6/7 there is a change on the structure of input files from 
-    #divvyup_store/photoID/...
-    #to
-    #divvyup_store/productType/photoID/...
+    #To update: current weights on index or here
     #print('testing')
     #downloadBlob('model_staging','colorization/pix34wmask/latest_net_D.pth', 'ckpt/pix2512/latest_net_D.pth')
     #downloadBlob('model_staging','colorization/pix34wmask/latest_net_G.pth', 'ckpt/pix2512/latest_net_G.pth')
     #downloadBlob('model_staging','colorization/pix34wmask/test_opt.txt', 'ckpt/pix2512/test_opt.txt')
-    #toTest=['1512','224668','18101','2515']
-    #toTest=['232947','266919','157338']
-    toTest = ['18101']
-    #toTest = ['97200','95025','45980','42346','351283','322171','32002','291675','27575','25942','24223','239948','218158','177086','120427','1186']
-    for value in toTest:
-        start(f'divvyup_store/{value}/rotcor_crop_of_subject', 'model_staging/colorization/July/new',name ='new')
-    print('program finished')    
+    #toTest = ['18101']
+    #toTest = ['18100']
+    exp = 130
+    import random
+    import pandas as pd
+    ImForTrained = '/home/ericd/imagesForTrain.txt'
+    ssim = '/home/ericd/sample/pytorch-CycleGAN-and-pix2pix/ssim.txt' 
+    with open(ImForTrained,'r') as ift:
+        IFT_ = ift.readlines()
+        IFT = [x[:-1] for x in  IFT_]
+    with open(ssim,'r') as iwp:
+        SSIM_ = iwp.readlines()
+        SSIM = [x[:-1].split()[0] for x in  SSIM_]
+    CorIWP = list(set(SSIM).difference(IFT))
+    filssim = [b for b in SSIM_ if b[:-1].split()[0] in CorIWP]  
+    print(f'out of {len(filssim)} images')
+    data6=pd.DataFrame(filssim)
+    data6.columns=['Name'] 
+    data6[['item','code','mcreated','minput','d','created','input','g']]=data6.Name.str.split(" ",expand=True) 
+    data6[["mcreated", "minput"]] = data6[["mcreated", "minput"]].apply(pd.to_numeric)
+    data7 = data6[data6['minput']>.809-.043]
+    data8 = data7[data7['minput']<.809+.043]
+    index = data8['item'].to_list()
+    val = random.sample(index, 100)
+    print(f'we selected 100 to test on epoch  {exp}')
+    os.system('rm -rf /home/ericd/colorization_images/retrain/new/pytorch-CycleGAN-and-pix2pix/datasets/A/test/.ipynb_checkpoints/')
+    for value in val:
+        try:
+            print(start(f'divvyup_store/{value.replace(".png","")}/processed', f'model_staging/colorization/July/new/{exp}/img',name ='new', exp = exp))
+        except Exception as e:
+            print(e)
+            continue
+    import os
+    os.system(f'gsutil cp /home/ericd/colorization_images/retrain/new/pytorch-CycleGAN-and-pix2pix/ckpt/new/{exp}* gs://model_staging/colorization/July/new/{exp}/w/')
+    print('program finished, it used:') 
+    print(val)
     print('test ended')
